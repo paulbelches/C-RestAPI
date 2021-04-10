@@ -21,11 +21,23 @@ using namespace std;
  * 
  *  https://github.com/Tencent/rapidjson
  * 
+ *  https://github.com/Microsoft/cpprestsdk
+ * 
  * 
  */
 #define BASEITUNESURL "http://itunes.apple.com/search?term="
-#define BASETVMAZEURL "http://api.tvmaze.com/singlesearch/shows?q="
+#define BASETVMAZEURL "http://api.tvmaze.com/search/shows?q="
 
+
+struct requestInfo
+{
+    string url, posturl, type, source, resultLocation;
+}; 
+
+const struct requestInfo itunesMusic = {BASEITUNESURL, "&entity=song", "song", "itunes", "results"} ;
+const struct requestInfo itunesMovies = {BASEITUNESURL, "&entity=song", "movie", "itunes", "results"} ;
+const struct requestInfo tvmazeSeries = {BASETVMAZEURL, "", "serie", "tvmaze", ""} ;
+const vector<const requestInfo*> searchConfig = {&itunesMusic, &itunesMovies, &tvmazeSeries};
 
 int request(string type, string url, string* resultAdress){
     try
@@ -45,7 +57,7 @@ int request(string type, string url, string* resultAdress){
     }
 }
 
-void processResults(const Value& array, Value& resultArray, rapidjson::Document& resultDocument, string dataType, string source){
+void processResults(const Value& array, Value& resultArray, rapidjson::Document& resultDocument, const requestInfo* source){
     Document::AllocatorType& allocator = resultDocument.GetAllocator();
     for (int i = 0; i < array.Size(); i++){
         if ( array[i].IsObject() ) {
@@ -56,12 +68,11 @@ void processResults(const Value& array, Value& resultArray, rapidjson::Document&
             string obj = sb.GetString();
             Document document(&resultDocument.GetAllocator());;
             document.Parse(obj.c_str());
-            object.AddMember("id", i, allocator);
             Value s;
-            const char * ctype = dataType.c_str();
+            const char * ctype = source->type.c_str();
             s.SetString(StringRef(ctype));
             object.AddMember("type", s, allocator);
-            const char * csource = source.c_str();
+            const char * csource = source->source.c_str();
             s.SetString(StringRef(csource));
             object.AddMember("source", s, allocator);
             object.AddMember("data", document, allocator);
@@ -70,39 +81,38 @@ void processResults(const Value& array, Value& resultArray, rapidjson::Document&
     }
 }
 
+void obtainInfo(Value& resultArray, rapidjson::Document& resultDocument, string term, const vector<const requestInfo*> configs){
+    for (int i = 0; i < configs.size(); i++){
+        struct requestInfo config = *configs[i];
+        string requestResult = "";
+        int exitStatus = request("GET", config.url + term + config.posturl, &requestResult);
+        if (exitStatus > -1){
+            // 1. Parse string request into json
+            const char* json = requestResult.c_str();
+            Document document;
+            document.Parse(json);
+            // 2. Optain request results.
+            Value& results = document;
+            if (config.resultLocation.size() > 0){
+                results = document["results"];
+            } 
+            assert(results.IsArray());
+            // 
+            processResults(results, resultArray, resultDocument, configs[i]);
+            //
+        }
+    }
+
+}
 
 int main(int argc, char *argv[]) {
     Document resultDocument;
     resultDocument.SetObject();
     Document::AllocatorType& allocator = resultDocument.GetAllocator();
-
     Value resultArray(Type::kArrayType);
-
-    string url = BASEITUNESURL;
-    string requestResult = "";
-    int exitStatus = request("GET", url + "jack", &requestResult);
-    if (exitStatus > -1){
-        // 1. Parse string request into json
-        const char* json = requestResult.c_str();
-        Document document;
-        document.Parse(json);
-        // 2. Optain request results.
-        const Value& results = document["results"];
-        assert(results.IsArray());
-        // 
-        processResults(results, resultArray, resultDocument, "track", "itunes");
-        //
-    } 
-
+    string url, posturl, type, source;
+    obtainInfo(resultArray, resultDocument, "jack", searchConfig);
     resultDocument.AddMember("result", resultArray, allocator);
-        /*
-        for (SizeType i = 0; i < results.Size(); i++) // Uses SizeType instead of size_t
-            const Value& resultElement = results[i]; 
-            assert(resultElement.HasMember("trackName"));
-            assert(resultElement["trackName"].IsString());
-            cout << i << resultElement["trackName"] << endl  ;
-        */       
-
     StringBuffer buffer;
     Writer<StringBuffer> writer(buffer);
     resultDocument.Accept(writer);
