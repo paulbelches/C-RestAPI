@@ -21,6 +21,7 @@ With apt-get on Debian/Ubuntu
 
         $ g++ -std=c++11 main.cpp -o main.run -lboost_system -lcrypto -lssl -lcpprest
 4. Run
+
         $ ./main.run
           
 4. To test the rest API you can execute
@@ -28,3 +29,5 @@ With apt-get on Debian/Ubuntu
         $ curl --header "Content-Type: application/json" --request POST --data '{"keyword":"wu tang"}' http://localhost:9000/api/search
           
 ## License
+
+Mit License Copyright (c) 2019 Paul Belches.
