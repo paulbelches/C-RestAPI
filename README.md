@@ -24,7 +24,7 @@ With apt-get on Debian/Ubuntu
 
         $ ./main.run
           
-4. To test the rest API you can execute
+4. To test the rest API you can execute, in another terminal
         
         $ curl --header "Content-Type: application/json" --request POST --data '{"keyword":"wu tang"}' http://localhost:9000/api/search
           
