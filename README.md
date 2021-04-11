@@ -27,3 +27,4 @@ With apt-get on Debian/Ubuntu
         
         $ curl --header "Content-Type: application/json" --request POST --data '{"keyword":"wu tang"}' http://localhost:9000/api/search
           
+## License
